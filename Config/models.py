@@ -11,27 +11,20 @@ class PasswordResetKey(models.Model):
     user = models.OneToOneField(User,on_delete=models.CASCADE,null=True)
     key = models.CharField(max_length=20,null=True,blank=True)
     key_generated_at = models.DateTimeField(blank=True,null=True)
-    initial_request_sent = models.BooleanField(default=False)
 
     def save(self,*args,**kwargs):
         if self.key is None or not self.is_valid():
             self.key = binascii.hexlify(os.urandom(20)).decode()
             self.key_generated_at = datetime.datetime.now() 
+        
+        super().save(*args,**kwargs)
 
     def is_valid(self):
         """Checks weather the key is still valid or not"""
-        if datetime.datetime.now().second - datetime.timedelta(self.key_generated_at).seconds >= 600:
+        if datetime.datetime.now().second - self.key_generated_at.sceond <= 600:
             return True
+        
         return False 
-    
-    def regenerate_key(self):
-        #The time period between generation of keys should be >= 60 sceonds
-        if datetime.datetime.now().second - datetime.timedelta(self.key_generated_at).seconds >= 60: 
-            self.key = binascii.hexlify(os.urandom(20)).decode()
-            self.key_generated_at = datetime.datetime.now() 
-            self.save()
-            return True
-        return False
 
 
 class ConfirmationKey(models.Model):

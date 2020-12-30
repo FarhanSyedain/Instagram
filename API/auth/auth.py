@@ -9,6 +9,8 @@ from rest_framework.decorators import api_view
 
 from django.contrib.auth import authenticate
 from django.core.mail import send_mail
+from django.contrib.auth.password_validation import validate_password
+
 
 @api_view(['POST',])
 def get_confirmation_key(request):
@@ -75,18 +77,16 @@ def request_password_reset(request):
     if user is None:
         return Response(data={'invalid_username':'please check if the username is correct'})
     
-    password_key_obj = PasswordResetKey.objects.get_or_create(user=user)
-    generated_now = False
+    password_key_obj, created = PasswordResetKey.objects.get_or_create(user=user)
 
-    if password_key_obj.key is None:
+    if created:
         password_key_obj.save() # It'll generate a new key
-        generated_now = True
 
     key = password_key_obj.key 
 
-    if not generated_now: 
+    if not created: 
         # check if user requestes resend early
-        if datetime.datetime.now().second -  datetime.timedelta(password_key_obj.key_generated_at).seconds >= 60:
+        if datetime.datetime.now().second -  password_key_obj.key_generated_at.second <= 60:
             return Response({'key_generation_error':'Can\'nt send key : Only send key if it\'s one or more that one minute old'})
 
     try:
@@ -98,11 +98,53 @@ def request_password_reset(request):
             recipient_list=[f'{user.email}']
         )
 
+        return Response({'email_sent_successfull':'Email was sent successfully'})
+
     except Exception:
         return Response(data={'email_error':f'Could\'nt send the email, try checking weather the email is correct or not '})
      
 
-@api_view(['POST,'])
+@api_view(['POST',])
 def reset_password(request):
     data = request.data
-    username = data.get('username')
+    username = data.get('username',None)
+
+    if username is None:
+        return Response({'username':'please submit the username'})
+    
+    user = User.objects.get(username=username) if User.objects.filter(username=username).exists() else None
+
+    if user is None:
+        return Response({'invalid_username':'the provided username is invalid'})
+
+    password, confirm_password = data.get('password',None), data.get('confirm_password',None)
+
+    if password is None :
+        return Response({'password':'Please provide the password'})
+    if confirm_password is None:
+        return Response({'confirm_password':'Please provide password2'})
+
+    if not password == confirm_password:
+        return Response({'password_match':'the two passwords don\'t match'})
+    
+    try:
+        validate_password(password)
+    except:
+        return Response({'password_valid':'The password does\'nt satisty our validitors'})
+
+    key = data.get('key',None)
+
+    key_obj, created = PasswordResetKey.objects.get_or_create(user=user) 
+
+    if created:
+        return Response({'key_not_found':'Please generate the key first'})
+
+    if key == key_obj.key and key is not None:
+        user.set_password(password)
+        user.save()
+        key_obj.delete()
+
+        return Response({'successfull':'password reset was successfull'})
+
+    return Response({'invalid_key':'the key provided was invalid'})
+    

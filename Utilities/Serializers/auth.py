@@ -125,23 +125,6 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'regeneration_regected':"Can't regenerate the key : regeneraion can take place only after 1 minute"})
 
 
-class PasswordReset(serializers.Serializer):
-    confirm_password = serializers.CharField(style={'input_type':'password'},write_only=True)
-    confirmation_key = serializers.CharField(style={'input_type':'text'})
 
-    class Meta:
-        model = User
-        fields = ['confirm_password','password','confirmation_key','username']
-        extra_kwargs = {
-            'password':{
-                'write_only':True
-            }
-        }
-    
-
-    def save(self,*args,**kwargs):
-
-        user = User.objects.get('username')
-        PasswordReset.objects.get(user=user) if PasswordReset.objects.filter(user=user).exists() else None
 
 
