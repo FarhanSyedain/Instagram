@@ -1,10 +1,11 @@
 from rest_framework import serializers
 
-from Config.models import User, ConfirmationKey
+from Config.models import User, ConfirmationKey, Profile
 
 from django.contrib.auth.password_validation import validate_password 
 from django.core.mail import send_mail
 
+from Utilities.functionalities import valid_username
 
 class UserSerializer(serializers.ModelSerializer):
 
@@ -48,9 +49,8 @@ class UserSerializer(serializers.ModelSerializer):
         """
         Returns True if user can be created with provided detials, and raises errors if provided details are invalid and/or don't satisfy 
         conditions
-
+        
         Key_id : id of the Confirmation_key object. 
-
         """
 
         key_id = self.initial_data.get('key_id',None) 
@@ -71,8 +71,7 @@ class UserSerializer(serializers.ModelSerializer):
             obj = ConfirmationKey.objects.get(username=username)
 
             if obj.email != email: 
-                print(email == obj.email, obj.email,email)
-                if obj.is_valid(): #TODO: document later on precisely 
+                if not valid_username(username):
                     if obj.key != key_id :
                         raise serializers.ValidationError({'username_being_registerd':'Another user has already taken the username though not confirmed'}) 
                 
@@ -118,13 +117,7 @@ class UserSerializer(serializers.ModelSerializer):
             confirmation_key_obj = ConfirmationKey().objects.get_or_create(username=username,email=email)
 
             if confirmation_key_obj.regenerate_key.regenerate_key():
-                self.send_confirmation()
-                
+                self.send_confirmation(resend=True)
                 return True
                 
             raise serializers.ValidationError({'regeneration_regected':"Can't regenerate the key : regeneraion can take place only after 1 minute"})
-
-
-
-
-

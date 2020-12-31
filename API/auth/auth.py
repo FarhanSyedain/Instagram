@@ -37,12 +37,12 @@ def confirm_user(request):
         return Response(data=serializer.errors)
 
 @api_view(['POST',])
-def get_confirmation_key(request):
+def resend_confirmation_key(request):
     serializer = UserSerializer(data=request.data)
 
     if serializer.is_valid():
-        serializer.send_confirmation()
-        return Response({'confirmation_sent':'The confirmation key has been sent to your email'})
+        serializer.resend_confirmation()
+        return Response({'confirmation_sent':'The confirmation key has been resent to your email'})
 
     else:
         return Response(data=serializer.errors)

@@ -1,7 +1,9 @@
 from django.contrib import admin
 from django.urls import path
 
-from API.auth.auth import get_confirmation_key, login_user, confirm_user, request_password_reset, reset_password
+from API.auth.auth import get_confirmation_key, login_user, confirm_user, request_password_reset, reset_password, resend_confirmation_key
+from API.profile import  update_user_, delete_user
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -10,7 +12,9 @@ urlpatterns = [
     path('api/account/register/confirm_user',confirm_user),
     path('api/account/password/forgot/get_confirmation',request_password_reset),
     path('api/account/password/forgot/reset',reset_password),
+    path('api/account/obtain_token',login_user),
 
-    path('api/account/login',login_user),
-    
+    path('api/account/user/update',update_user_),
+    path('api/account/user/delete',delete_user),
+
 ]
