@@ -2,8 +2,10 @@ from rest_framework import serializers
 
 from Config.models import User, Profile
 from Utilities.functionalities import valid_username
+from PIL import Image
 
 from django.contrib.auth.password_validation import validate_password
+
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -14,6 +16,8 @@ class ProfileSerializer(serializers.ModelSerializer):
     
 
     def save(self,save=False,*args,**kwargs):
+        if save:
+            self.instance.save()
 
         private = self.initial_data.get('private',None)
 
@@ -35,10 +39,20 @@ class ProfileSerializer(serializers.ModelSerializer):
         if country:
             self.instance.country = country
         
-        #TODO : Programe for profile picture
+        profile_picture = self.validated_data.get('profile_picture',False)
+        clear_profile = self.initial_data.get('clear_profile',False)
 
-        if save:
-            self.instance.save()
+        if clear_profile:
+            if bool(self.instance.profile_picture):
+                path = self.instance.profile_picture.path
+                self.instance.profile_picture.delete()
+
+        if profile_picture:
+            if bool(self.instance.profile_picture): # removet he previous profile picture , (if any)
+                path = self.instance.profile_picture.path
+                self.instance.profile_picture.delete()
+
+            self.instance.profile_picture = profile_picture
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -49,6 +63,16 @@ class UserSerializer(serializers.ModelSerializer):
     
 
     def save(self,save=False,*args,**kwargs):
+        username = self.initial_data.get('username',False)
+
+        if save:
+            try:
+                self.instance.save()
+            except Exception as e:
+                if not valid_username(username):
+                    raise serializers.ValidationError({'username_ununique':'The username is already taken or been registerd'})
+                raise e
+
         confirm_password = self.initial_data.get('confirm_password',None)
         password = self.initial_data.get('password',None)
 
@@ -65,7 +89,6 @@ class UserSerializer(serializers.ModelSerializer):
         first_name = self.validated_data.get('first_name',False)
         last_name = self.validated_data.get('last_name',False)
         email = self.validated_data.get('email',False)
-        username = self.initial_data.get('username',False)
 
         if first_name:
             self.instance.first_name = first_name
@@ -83,11 +106,3 @@ class UserSerializer(serializers.ModelSerializer):
         if username:
             self.instance.username = username
         
-        if save:
-            try:
-                self.instance.save()
-            except Exception as e:
-                if not valid_username(username):
-                    raise serializers.ValidationError({'username_ununique':'The username is already taken or been registerd'})
-                raise e
-                

@@ -3,6 +3,7 @@ import os
 import json
 import random
 import datetime
+from PIL import Image
 
 from django.db import models
 from django.contrib.auth.models import User, AbstractUser
@@ -59,16 +60,43 @@ class ConfirmationKey(models.Model):
     
 class Profile(models.Model):
     user = models.OneToOneField(User,on_delete=models.CASCADE,null=True,related_name="profile")
-    profile_picture = models.ImageField(blank=True,null=True,upload_to="Data/Users/Profiles")
+    profile_picture = models.ImageField(blank=True,null=True,upload_to="Data/Users/Profiles",default=None)
     bio = models.TextField(blank=True,null=True)
     private = models.BooleanField(default=False)
     profile_updated = models.DateTimeField(auto_now=True)
-    following = models.ManyToManyField('self',blank=True)
-    followers = models.ManyToManyField('self',blank=True)
     phone_number = models.IntegerField(blank=True,null=True)
     country = models.CharField(max_length=25,blank=True,null=True)
-    followRequestsSend = models.ManyToManyField('self',blank=True)
-    followRequests = models.ManyToManyField('self',blank=True)
+
+    def save(self,*args,**kwargs):
+        super().save(*args,**kwargs)
+
+        if bool(self.profile_picture):
+            img = Image.open(self.profile_picture.path)
+
+            if img.height > 300 or img.width > 300:
+                pass
+                #TODO Correct the errors bellow
+                """
+                output_size = (300,300)
+                img.thumbnail(output_size)
+                img.save(self.profile_picture.path)
+                """
+    
+    def __str__(self):
+        return self.user.username
+
+
+class Follow(models.Model):
+    user = models.OneToOneField(Profile,on_delete=models.CASCADE,null=True)
+    followers = models.ManyToManyField(User,blank=True,related_name='my_followers')
+    followRequests = models.ManyToManyField(Profile,blank=True,related_name='follow_requests_sent')
+
+
+class Following(models.Model):
+    user = models.OneToOneField(Profile,on_delete=models.CASCADE,null=True)
+    following = models.ManyToManyField(User,blank=True,related_name='i_follow')
+    followRequestsSent = models.ManyToManyField(Profile,blank=True,related_name='follow_requests_got')
+
 
 class Post(models.Model):
     people_tagged = models.ManyToManyField(Profile,blank=True)
