@@ -106,3 +106,5 @@ class UserSerializer(serializers.ModelSerializer):
         if username:
             self.instance.username = username
         
+
+#class FollowersSerilizer(serializers.ModelSerializer):

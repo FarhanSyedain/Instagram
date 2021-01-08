@@ -2,6 +2,7 @@ from rest_framework.generics import ListAPIView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.validators import ValidationError
 
 from Config.models import User, Profile, Follow, Following, Posts
 from Utilities.functionalities import follow_user as _follow_user , unfollow_user as _unfollow_user, unsend_follow_request as UFR, follows
@@ -163,13 +164,35 @@ def delete_user(request):
         return Response({'successfull':'User successfully deleted'})
     return Response({'password':'Invalid Password'})
 
+
 class GetFollowers(ListAPIView):
 
     """
     Returns the users who follw user,along with weather the visiter — the one who sent api request — follows them or they follow him/her
     """
-    
 
+    permission_classes = [IsAuthenticated,]
+    serializer_class = None
+
+    def get_queryset(self,*args,**kwargs):
+        user = self.request.data.get('user',None)
+        
+        if user is None:
+            raise ValidationError(detail={'user':'This field is required — send as a query_param'})
+        
+        user, created = User.objects.get_or_create(username=user)
+
+        if created:
+            raise ValidationError(detail={'user':'Invalid username'})
+            
+        visiter = self.request.user
+        if user.profile.is_private:
+            followers_obj, created = Follow.objects.get_or_create(user=user.profile)
+            if not followers_obj.followers.filter(username=user).exists():
+                raise ValidationError(detail={'Private account':'This account is private , follow the user to access the followers'})
+        
+        
+   
 class GetFollowing(ListAPIView):
 
     """
